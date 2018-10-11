@@ -5,6 +5,7 @@
 
 #define NUM_TKN 100
 #define TKN_SIZE 31
+#define _DEBUG 1
 
 typedef struct TOKEN {
     int kind;
@@ -12,8 +13,12 @@ typedef struct TOKEN {
     char text[TKN_SIZE + 1];
 } TOKEN;
 
-enum {digit, letter, operand, control, INVALID, NKIND};
-const char kindtext[NKIND + 1][10] = {"digit", "letter", "operand", "control", ""};
+enum {digit, letter, plus, minus, mult, divi, 
+      control, INVALID, NKIND};
+char ctype[256 + 1];
+const char kindtext[NKIND + 1][10] = 
+    {"digit", "letter", "plus", "minus", "mult", "divi",
+     "control", ""};
 const char *opsText = "+-*/";
 const char *ctrlsText = "=;";
 TOKEN INVALID_TKN = {INVALID, 0, ""};
@@ -22,18 +27,20 @@ TOKEN tkns[NUM_TKN];
 int numtkn;
 int eof_found = 0;
 
+void initCapture();
 void openfile(const char *fname);
 void execute();
 int expression();
 int term();
 int factor();
 void nextTkn();
-void lookTkn();
+void lookTkn(int);
 void printTkn(TOKEN);
 int isoperand(char c);
 int iscontrol(char c);
-int getInt();
-void getIdent();
+void getInt(TOKEN *);
+void getIdent(TOKEN *);
+void ungetstr(char *);
 
 void skipSpace();
 
@@ -44,12 +51,14 @@ int main (int argc, const char* argv[])
     int result;
 
     openfile(argv[1]);
-    while (nextTkn(), tkn.kind != INVALID) {
-        printTkn(tkn);
-    }
+    initCapture();
+
+    //while (nextTkn(), tkn.kind != INVALID) {
+    //    printTkn(tkn);
+    //}
     //execute();
-    //result = expression();
-    //printf("%d\n", result);
+    result = expression();
+    printf("%d\n", result);
 
     return 0;
 }
@@ -85,22 +94,32 @@ int expression()
     result = tkn.val;
 
     while (nextTkn(), tkn.kind != INVALID) {
-        switch (tkn.text[0]) {
-        case '+':
-            nextTkn();
-            result += tkn.val;
+        switch (tkn.kind) {
+        case plus:
+            lookTkn(2);
+            if (looktkn.kind == mult || looktkn.kind == divi) {
+                result += term();
+            } else {
+                nextTkn();
+                result += tkn.val;
+            }
             break;
-        case '-':
-            nextTkn();
-            result -= tkn.val;
+        case minus:
+            lookTkn(2);
+            if (looktkn.kind == mult || looktkn.kind == divi) {
+                result -= term();
+            } else {
+                nextTkn();
+                result -= tkn.val;
+            }
             break;
-        case '*':
+        case mult:
             nextTkn();
-            result *= tkn.val;
+            return result * tkn.val;
             break;
-        case '/':
+        case divi:
             nextTkn();
-            result /= tkn.val;
+            return result / tkn.val;
             break;
         default :
             break;
@@ -141,29 +160,33 @@ void nextTkn()
     if (isdigit(c)) {
         ungetc(c, fp);
         tkn.kind = digit;
-        tkn.val = getInt();
+        getInt(&tkn);
     } else if (isalpha(c)) {
         ungetc(c, fp);
         tkn.kind = letter;
         getIdent(&tkn);
     } else if (isoperand(c)) {
-        tkn.kind = operand;
+        tkn.kind = ctype[c];
         tkn.text[0] = c;
         tkn.text[1] = '\0';
     } else if (iscontrol(c)) {
-        tkn.kind = control;
+        tkn.kind = ctype[c];
         tkn.text[0] = c;
         tkn.text[1] = '\0';
     }
+
+#if _DEBUG==1
+    printTkn(tkn);
+#endif
 }
 
-void lookTkn()
+void lookTkn(int nfoward)
 {
     int i = 0;
-    char c, sc;
-    tkn.kind = INVALID;
-    tkn.val  = 0;
-    tkn.text[0] = '\0';
+    char c, sc, tmptxt[TKN_SIZE + 1];
+    looktkn.kind = INVALID;
+    looktkn.val  = 0;
+    looktkn.text[0] = '\0';
 
     // skip whitespace
     skipSpace();
@@ -175,21 +198,31 @@ void lookTkn()
     c = getc(fp);
     if (isdigit(c)) {
         ungetc(c, fp);
-        tkn.kind = digit;
-        tkn.val = getInt();
+        looktkn.kind = digit;
+        getInt(&looktkn);
     } else if (isalpha(c)) {
         ungetc(c, fp);
-        tkn.kind = letter;
-        getIdent(&tkn);
+        looktkn.kind = letter;
+        getIdent(&looktkn);
     } else if (isoperand(c)) {
-        tkn.kind = operand;
-        tkn.text[0] = c;
-        tkn.text[1] = '\0';
+        looktkn.kind = ctype[c];
+        looktkn.text[0] = c;
+        looktkn.text[1] = '\0';
     } else if (iscontrol(c)) {
-        tkn.kind = control;
-        tkn.text[0] = c;
-        tkn.text[1] = '\0';
-    }    
+        looktkn.kind = ctype[c];
+        looktkn.text[0] = c;
+        looktkn.text[1] = '\0';
+    }
+
+    strcpy(tmptxt, looktkn.text);
+
+#if _DEBUG==1
+    printTkn(looktkn);
+#endif
+    if (nfoward > 1)
+        lookTkn(nfoward - 1);
+
+    ungetstr(tmptxt);
 }
 
 void printTkn(TOKEN tkn)
@@ -217,20 +250,24 @@ int iscontrol(char c)
     return 0;
 }
 
-int getInt()
+void getInt(TOKEN *_tkn)
 {
     int i = 0, num = 0;
     char c;
-    while ((i < 11) && (c = getc(fp))) {
+
+    while ((i < 10) && (c = getc(fp))) {
         if (c == EOF)
             break;
-        if (isdigit(c))
+        if (isdigit(c)) {
             num = 10 * num + (c - '0');
-        else
+            _tkn->text[i++] = c;
+        } else {
             break;
+        }
     }
+    _tkn->val = num;
+
     ungetc(c, fp);
-    return num;
 }
 
 void getIdent(TOKEN *tkn)
@@ -257,6 +294,16 @@ void openfile(const char *fname)
         perror("fopen");
 }
 
+void ungetstr(char *str)
+{
+    int i = 0;
+
+    if (!str[0])
+        return ;
+    while (str[i]) i++;
+    while (ungetc(str[--i], fp), i > 0);
+}
+
 void skipSpace()
 {
     char c;
@@ -265,4 +312,20 @@ void skipSpace()
         eof_found = 1;
     }
     ungetc(c, fp);
+}
+
+void initCapture()
+{
+    char i;
+    for (i = 0; i < sizeof(ctype); i++)
+        ctype[i] = INVALID;
+
+    for (i = '0'; i <= '9'; i++)
+        ctype[i] = digit;
+    for (i = 'a'; i <= 'z'; i++)
+        ctype[i] = letter;
+    for (i = 'A'; i <= 'Z'; i++)
+        ctype[i] = letter;
+    ctype['+'] = plus; ctype['-'] = minus;
+    ctype['*'] = mult; ctype['/'] = divi;
 }
