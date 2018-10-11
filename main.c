@@ -24,9 +24,9 @@ int eof_found = 0;
 
 void openfile(const char *fname);
 void execute();
-void expression();
-void term();
-void factor();
+int expression();
+int term();
+int factor();
 void nextTkn();
 void lookTkn();
 void printTkn(TOKEN);
@@ -41,9 +41,15 @@ FILE *fp;
 
 int main (int argc, const char* argv[])
 {
-    openfile(argv[1]);
+    int result;
 
-    execute();
+    openfile(argv[1]);
+    while (nextTkn(), tkn.kind != INVALID) {
+        printTkn(tkn);
+    }
+    //execute();
+    //result = expression();
+    //printf("%d\n", result);
 
     return 0;
 }
@@ -70,18 +76,49 @@ void execute()
         //expression();
     }
 }
-void expression()
+int expression()
+{
+    int result = 0;
+    nextTkn();
+    if (tkn.kind != digit)
+        printf("must start with digits\n");
+    result = tkn.val;
+
+    while (nextTkn(), tkn.kind != INVALID) {
+        switch (tkn.text[0]) {
+        case '+':
+            nextTkn();
+            result += tkn.val;
+            break;
+        case '-':
+            nextTkn();
+            result -= tkn.val;
+            break;
+        case '*':
+            nextTkn();
+            result *= tkn.val;
+            break;
+        case '/':
+            nextTkn();
+            result /= tkn.val;
+            break;
+        default :
+            break;
+        }
+    }
+
+    return result;
+}
+int term()
 {
     nextTkn();
-    
+    int result;
+    return result;
 }
-void term()
+int factor()
 {
-
-}
-void factor()
-{
-
+    int result;
+    return result;
 }
 
 void nextTkn()
@@ -92,13 +129,13 @@ void nextTkn()
     tkn.val  = 0;
     tkn.text[0] = '\0';
     
+    // skip whitespace
+    skipSpace();
+
     if (eof_found) {
         printf("----- end of file -----\n");
         return;
     }
-
-    // skip whitespace
-    skipSpace();
 
     c = getc(fp);
     if (isdigit(c)) {
@@ -117,8 +154,6 @@ void nextTkn()
         tkn.kind = control;
         tkn.text[0] = c;
         tkn.text[1] = '\0';
-    } else if (c == EOF) {
-        eof_found = 1;
     }
 }
 
@@ -130,12 +165,12 @@ void lookTkn()
     tkn.val  = 0;
     tkn.text[0] = '\0';
 
+    // skip whitespace
+    skipSpace();
+
     if (eof_found) {
         return;
     }
-
-    // skip whitespace
-    skipSpace();
 
     c = getc(fp);
     if (isdigit(c)) {
@@ -154,10 +189,7 @@ void lookTkn()
         tkn.kind = control;
         tkn.text[0] = c;
         tkn.text[1] = '\0';
-    } else if (c == EOF) {
-        eof_found = 1;
-    }
-    
+    }    
 }
 
 void printTkn(TOKEN tkn)
@@ -229,5 +261,8 @@ void skipSpace()
 {
     char c;
     while (isspace(c = getc(fp)));
+    if (c == EOF) {
+        eof_found = 1;
+    }
     ungetc(c, fp);
 }
