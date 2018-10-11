@@ -9,69 +9,155 @@
 typedef struct TOKEN {
     int kind;
     int val;
-    char text[TKN_SIZE];
+    char text[TKN_SIZE + 1];
 } TOKEN;
 
-enum {digit, letter, control, INVALID, NKIND};
-const char kindtext[NKIND + 1][10] = {"digit", "letter", "control", ""};
-const char *ctrlsText = "+-*/=;";
+enum {digit, letter, operand, control, INVALID, NKIND};
+const char kindtext[NKIND + 1][10] = {"digit", "letter", "operand", "control", ""};
+const char *opsText = "+-*/";
+const char *ctrlsText = "=;";
 TOKEN INVALID_TKN = {INVALID, 0, ""};
+TOKEN tkn, looktkn;
+TOKEN tkns[NUM_TKN];
+int numtkn;
+int eof_found = 0;
 
-TOKEN nextTkn();
+void openfile(const char *fname);
+void execute();
+void expression();
+void term();
+void factor();
+void nextTkn();
+void lookTkn();
 void printTkn(TOKEN);
+int isoperand(char c);
 int iscontrol(char c);
+int getInt();
+void getIdent();
+
+void skipSpace();
 
 FILE *fp;
 
 int main (int argc, const char* argv[])
 {
-    int itkn, i;
-    TOKEN tkn, tkns[NUM_TKN];
+    openfile(argv[1]);
 
-    if (!(fp = fopen(argv[1], "r")))
-        perror("fopen");
+    execute();
 
-    itkn = 0;
-    while ((tkn = nextTkn()).kind != INVALID)
-        tkns[itkn++] = tkn;
-
-    for (i = 0; i < itkn; i++) {
-        printf("%d-th tokens \n", i+1);
-        printTkn(tkns[i]);
-    }
+    return 0;
 }
 
-TOKEN nextTkn()
+void execute()
+{
+    int i;
+
+    while (1) {
+        nextTkn();
+        if (tkn.kind == INVALID)
+            break;
+        printTkn(tkn);
+        //printf("%d\n", tkn.kind);
+        //if (tkn.kind != letter) {
+        //    printf("letter must be first\n");
+        //    break;
+        //}
+        //nextTkn();
+        //if (tkn.text[0] != '=') {
+        //    printf("equal must be second\n");
+        //    break;
+        //}
+        //expression();
+    }
+}
+void expression()
+{
+    nextTkn();
+    
+}
+void term()
+{
+
+}
+void factor()
+{
+
+}
+
+void nextTkn()
 {
     int i = 0;
     char c, sc;
-    TOKEN tkn = {INVALID, 0, ""};
+    tkn.kind = INVALID;
+    tkn.val  = 0;
+    tkn.text[0] = '\0';
+    
+    if (eof_found) {
+        printf("----- end of file -----\n");
+        return;
+    }
 
     // skip whitespace
-    while (isspace(c = getc(fp)));
-    ungetc(c, fp);
+    skipSpace();
 
-    while ((i < TKN_SIZE) && (c = getc(fp))) {
-        if (c == EOF)
-            break;
-        if (!isspace(c))
-            tkn.text[i++] = c;
-        else
-            break;
-    }
-
-    sc = tkn.text[0];
-    tkn.text[i] = '\0';
-    if (isdigit(sc)) {
+    c = getc(fp);
+    if (isdigit(c)) {
+        ungetc(c, fp);
         tkn.kind = digit;
-        tkn.val = atoi(tkn.text);
-    } else if (isalpha(sc)) {
+        tkn.val = getInt();
+    } else if (isalpha(c)) {
+        ungetc(c, fp);
         tkn.kind = letter;
-        tkn.val = strlen(&tkn.text[0]);
-    } else if (iscontrol(sc)) {
+        getIdent(&tkn);
+    } else if (isoperand(c)) {
+        tkn.kind = operand;
+        tkn.text[0] = c;
+        tkn.text[1] = '\0';
+    } else if (iscontrol(c)) {
         tkn.kind = control;
+        tkn.text[0] = c;
+        tkn.text[1] = '\0';
+    } else if (c == EOF) {
+        eof_found = 1;
     }
-    return tkn;
+}
+
+void lookTkn()
+{
+    int i = 0;
+    char c, sc;
+    tkn.kind = INVALID;
+    tkn.val  = 0;
+    tkn.text[0] = '\0';
+
+    if (eof_found) {
+        return;
+    }
+
+    // skip whitespace
+    skipSpace();
+
+    c = getc(fp);
+    if (isdigit(c)) {
+        ungetc(c, fp);
+        tkn.kind = digit;
+        tkn.val = getInt();
+    } else if (isalpha(c)) {
+        ungetc(c, fp);
+        tkn.kind = letter;
+        getIdent(&tkn);
+    } else if (isoperand(c)) {
+        tkn.kind = operand;
+        tkn.text[0] = c;
+        tkn.text[1] = '\0';
+    } else if (iscontrol(c)) {
+        tkn.kind = control;
+        tkn.text[0] = c;
+        tkn.text[1] = '\0';
+    } else if (c == EOF) {
+        eof_found = 1;
+    }
+    
 }
 
 void printTkn(TOKEN tkn)
@@ -81,12 +167,67 @@ void printTkn(TOKEN tkn)
     printf(" val : %d\n", tkn.val);
 }
 
+int isoperand(char c)
+{
+    int i = 0;
+    while (opsText[i] && c != opsText[i]) i++;
+    if (opsText[i])
+        return 1;
+    return 0;
+}
+
 int iscontrol(char c)
 {
     int i = 0;
     while (ctrlsText[i] && c != ctrlsText[i]) i++;
-
     if (ctrlsText[i])
         return 1;
     return 0;
+}
+
+int getInt()
+{
+    int i = 0, num = 0;
+    char c;
+    while ((i < 11) && (c = getc(fp))) {
+        if (c == EOF)
+            break;
+        if (isdigit(c))
+            num = 10 * num + (c - '0');
+        else
+            break;
+    }
+    ungetc(c, fp);
+    return num;
+}
+
+void getIdent(TOKEN *tkn)
+{
+    int i = 0;
+    char c;
+
+    c = getc(fp);
+    if (!isalpha(c))
+        return ;
+    tkn->text[i++] = c;
+    while ((c = getc(fp)) && i < TKN_SIZE && (isalpha(c) || isdigit(c)))
+        tkn->text[i++] = c;
+    tkn->text[i] = '\0';
+
+    ungetc(c, fp);
+}
+
+void openfile(const char *fname)
+{
+    if (!fname)
+        fp = stdin;
+    else if (!(fp = fopen(fname, "r")))
+        perror("fopen");
+}
+
+void skipSpace()
+{
+    char c;
+    while (isspace(c = getc(fp)));
+    ungetc(c, fp);
 }
