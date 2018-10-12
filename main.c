@@ -5,7 +5,6 @@
 
 #define NUM_TKN 100
 #define TKN_SIZE 31
-#define _DEBUG 1
 
 typedef struct TOKEN {
     int kind;
@@ -14,11 +13,11 @@ typedef struct TOKEN {
 } TOKEN;
 
 enum {digit, letter, plus, minus, mult, divi, 
-      control, INVALID, NKIND};
+      control, line_end, INVALID, NKIND};
 char ctype[256 + 1];
 const char kindtext[NKIND + 1][10] = 
     {"digit", "letter", "plus", "minus", "mult", "divi",
-     "control", ""};
+     "control", "line_end", ""};
 const char *opsText = "+-*/";
 const char *ctrlsText = "=;";
 TOKEN INVALID_TKN = {INVALID, 0, ""};
@@ -38,6 +37,7 @@ void lookTkn(int);
 void printTkn(TOKEN);
 int isoperand(char c);
 int iscontrol(char c);
+int isvalidtkn(TOKEN);
 void getInt(TOKEN *);
 void getIdent(TOKEN *);
 void ungetstr(char *);
@@ -57,8 +57,13 @@ int main (int argc, const char* argv[])
     //    printTkn(tkn);
     //}
     //execute();
-    result = expression();
-    printf("%d\n", result);
+    while (1) {
+        lookTkn(1);
+        if (looktkn.kind == INVALID)
+            break;
+        result = expression();
+        printf("%d\n", result);
+    }
 
     return 0;
 }
@@ -72,8 +77,7 @@ void execute()
         if (tkn.kind == INVALID)
             break;
         printTkn(tkn);
-        //printf("%d\n", tkn.kind);
-        //if (tkn.kind != letter) {
+        //printf("%d\n", tkn.kind); //if (tkn.kind != letter) {
         //    printf("letter must be first\n");
         //    break;
         //}
@@ -87,13 +91,13 @@ void execute()
 }
 int expression()
 {
-    int result = 0;
+    int result = 0, tmp = 0;
     nextTkn();
     if (tkn.kind != digit)
-        printf("must start with digits\n");
+        printf("expression() must start with digits\n");
     result = tkn.val;
 
-    while (nextTkn(), tkn.kind != INVALID) {
+    while (nextTkn(), isvalidtkn(tkn)) {
         switch (tkn.kind) {
         case plus:
             lookTkn(2);
@@ -115,11 +119,11 @@ int expression()
             break;
         case mult:
             nextTkn();
-            return result * tkn.val;
+            result *= tkn.val;
             break;
         case divi:
             nextTkn();
-            return result / tkn.val;
+            result /= tkn.val;
             break;
         default :
             break;
@@ -130,8 +134,35 @@ int expression()
 }
 int term()
 {
+    int result = 0;
+
     nextTkn();
-    int result;
+    if (tkn.kind != digit)
+        printf("term() must start with digits\n");
+    result = tkn.val;
+
+    while (lookTkn(1), isvalidtkn(looktkn)) {
+        if (looktkn.kind != mult && looktkn.kind != divi)
+            goto BREAK;
+        nextTkn();
+        switch (tkn.kind) {
+        case mult:
+            nextTkn();
+            result *= tkn.val;
+            break;
+        case divi:
+            nextTkn();
+            result /= tkn.val;
+            break;
+        default :
+            goto BREAK;
+        }
+    }
+
+BREAK:
+#ifdef DEBUG
+    printf("term returns %d\n", result);
+#endif
     return result;
 }
 int factor()
@@ -175,7 +206,7 @@ void nextTkn()
         tkn.text[1] = '\0';
     }
 
-#if _DEBUG==1
+#ifdef DEBUG
     printTkn(tkn);
 #endif
 }
@@ -216,9 +247,9 @@ void lookTkn(int nfoward)
 
     strcpy(tmptxt, looktkn.text);
 
-#if _DEBUG==1
-    printTkn(looktkn);
-#endif
+//#ifdef DEBUG
+//    printTkn(looktkn);
+//#endif
     if (nfoward > 1)
         lookTkn(nfoward - 1);
 
@@ -328,4 +359,10 @@ void initCapture()
         ctype[i] = letter;
     ctype['+'] = plus; ctype['-'] = minus;
     ctype['*'] = mult; ctype['/'] = divi;
+    ctype[';'] = line_end;
+}
+
+int isvalidtkn(TOKEN _tkn)
+{
+    return _tkn.kind != INVALID && _tkn.kind != line_end;
 }
