@@ -4,3 +4,4 @@ cdrom/*
 test*
 tmp*
 *org
+*.txt

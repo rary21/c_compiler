@@ -91,39 +91,16 @@ void execute()
 }
 int expression()
 {
-    int result = 0, tmp = 0;
-    nextTkn();
-    if (tkn.kind != digit)
-        printf("expression() must start with digits\n");
-    result = tkn.val;
+    int result, tmp = 0;
 
+    result = term();
     while (nextTkn(), isvalidtkn(tkn)) {
         switch (tkn.kind) {
         case plus:
-            lookTkn(2);
-            if (looktkn.kind == mult || looktkn.kind == divi) {
-                result += term();
-            } else {
-                nextTkn();
-                result += tkn.val;
-            }
+            result += term();
             break;
         case minus:
-            lookTkn(2);
-            if (looktkn.kind == mult || looktkn.kind == divi) {
-                result -= term();
-            } else {
-                nextTkn();
-                result -= tkn.val;
-            }
-            break;
-        case mult:
-            nextTkn();
-            result *= tkn.val;
-            break;
-        case divi:
-            nextTkn();
-            result /= tkn.val;
+            result -= term();
             break;
         default :
             break;
@@ -136,10 +113,9 @@ int term()
 {
     int result = 0;
 
-    nextTkn();
+    result = factor();
     if (tkn.kind != digit)
         printf("term() must start with digits\n");
-    result = tkn.val;
 
     while (lookTkn(1), isvalidtkn(looktkn)) {
         if (looktkn.kind != mult && looktkn.kind != divi)
@@ -147,12 +123,10 @@ int term()
         nextTkn();
         switch (tkn.kind) {
         case mult:
-            nextTkn();
-            result *= tkn.val;
+            result *= factor();
             break;
         case divi:
-            nextTkn();
-            result /= tkn.val;
+            result /= factor();
             break;
         default :
             goto BREAK;
@@ -167,8 +141,12 @@ BREAK:
 }
 int factor()
 {
-    int result;
-    return result;
+    nextTkn();
+    if (tkn.kind == digit)
+        return tkn.val;
+    else
+        printf("factor() error\n");
+    return 0;
 }
 
 void nextTkn()
