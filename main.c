@@ -15,14 +15,13 @@ int main (int argc, const char* argv[]){
 
     openfile(argv[1]);
     initCapture();
-
     while (1) {
         AST = buildAST();
         if (!AST)
             break;
         //printNode(AST);
         //printNodeRecursive(AST);
-        printRPN(AST);
+        //printRPN(AST);
         printf("%d\n", evalAST(AST));
         freeAST(AST);
     }
