@@ -1,9 +1,10 @@
 *.out
 *DS_Store
 cdrom/*
-test*
 tmp*
 *org
 *.txt
 *.o
-mycc
+generate_test
+test_generation
+test.*
