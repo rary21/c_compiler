@@ -17,13 +17,13 @@ void initCapture();
 void openfile(const char *fname);
 void nextTkn();
 void lookTkn(int);
-void printTkn(TOKEN);
-int isoperand(char c);
+int isoperator(char c);
 int iscontrol(char c);
 int isvalidtkn(TOKEN);
 void getInt(TOKEN *);
 void getIdent(TOKEN *);
 void ungetstr(char *);
 void skipSpace();
+TOKEN *copyCurTkn();
 
 #endif

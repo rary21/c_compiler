@@ -28,7 +28,6 @@ void nextTkn()
     skipSpace();
 
     if (eof_found) {
-        printf("----- end of file -----\n");
         return;
     }
 
@@ -41,7 +40,7 @@ void nextTkn()
         ungetc(c, fp);
         tkn.kind = letter;
         getIdent(&tkn);
-    } else if (isoperand(c)) {
+    } else if (isoperator(c)) {
         tkn.kind = ctype[c];
         tkn.text[0] = c;
         tkn.text[1] = '\0';
@@ -80,7 +79,7 @@ void lookTkn(int nfoward)
         ungetc(c, fp);
         looktkn.kind = letter;
         getIdent(&looktkn);
-    } else if (isoperand(c)) {
+    } else if (isoperator(c)) {
         looktkn.kind = ctype[c];
         looktkn.text[0] = c;
         looktkn.text[1] = '\0';
@@ -101,14 +100,7 @@ void lookTkn(int nfoward)
     ungetstr(tmptxt);
 }
 
-void printTkn(TOKEN tkn)
-{
-    printf("token:  kind: \"%-10s\"", kindtext[tkn.kind]);
-    printf(" text: %-10s", tkn.text);
-    printf(" val : %d\n", tkn.val);
-}
-
-int isoperand(char c)
+int isoperator(char c)
 {
     int i = 0;
     while (opsText[i] && c != opsText[i]) i++;
@@ -211,4 +203,12 @@ void initCapture()
 int isvalidtkn(TOKEN _tkn)
 {
     return _tkn.kind != INVALID && _tkn.kind != line_end;
+}
+
+TOKEN *copyCurTkn()
+{
+    TOKEN *tmp;
+    tmp = (TOKEN *)malloc(sizeof(TOKEN));
+    memcpy(tmp, &tkn, sizeof(TOKEN));
+    return tmp;
 }
