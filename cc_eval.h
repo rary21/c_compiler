@@ -5,7 +5,10 @@
 
 int evalAST(NODE *);
 void evalRPN(NODE *);
-int evalOP(int val1, int val2, int op);
+void evalOP(NODE *);
+int evalOP1(int val, int op);
+int evalOP2(int val1, int val2, int op);
 void pushTkn(TOKEN *);
 TOKEN *popTkn();
+int opnumber(NODE *);
 #endif

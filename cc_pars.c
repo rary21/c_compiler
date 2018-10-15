@@ -11,7 +11,11 @@ extern int eof_found;
 
 NODE *buildAST()
 {
-    return expression();
+    NODE *node;
+
+    node = expression();
+    nextTkn();
+    return node;
 }
 
 void freeAST(NODE *top)
@@ -49,8 +53,10 @@ NODE *expression()
 
     node = createNode();
     node->left = term();
-    if (!node->left)
+    if (!node->left) {
+        free(node);
         return NULL;
+    }
     while (lookTkn(1), isvalidtkn(looktkn)) {
         switch (looktkn.kind) {
         case plus:
@@ -69,9 +75,8 @@ NODE *expression()
             break;
         }
     }
-    nextTkn();
 #ifdef DEBUG
-    printf("exps  returns %d\n", result);
+    //printf("exps  returns %d\n", result);
 #endif
 
     node = cutRedundancy(node);
@@ -82,11 +87,11 @@ NODE *term()
     NODE *node, *pnode;
 
     node = createNode();
-
-    node = createNode();
     node->left = factor();
-    if (!node->left)
+    if (!node->left) {
+        free(node);
         return NULL;
+    }
     while (lookTkn(1), isvalidtkn(looktkn)) {
         if (looktkn.kind != mult && looktkn.kind != divi)
             goto BREAK;
@@ -107,7 +112,7 @@ NODE *term()
 
 BREAK:
 #ifdef DEBUG
-    printf("term  returns %d\n", result);
+    //printf("term  returns %d\n" );
 #endif
 
     node = cutRedundancy(node);
@@ -116,27 +121,41 @@ BREAK:
 
 NODE *factor()
 {
-    NODE *node;
+    NODE *node, *pnode;
 
     node = createNode();
     nextTkn();
-    if (eof_found)
+    if (!isvalidtkn(tkn)) {
         return NULL;
-    if (tkn.kind == digit) {
+    }
+
+    switch (tkn.kind) {
+    case digit:
         node->valtkn = copyCurTkn();
         return node;
-    } else if (tkn.kind == lpare) {
-        node->left = expression(); 
-    } else {
+    case lpare:
+        free(node);
+        node = expression(); 
+        nextTkn();
+        if (tkn.kind != rpare) {
+            printf("factor() paren must match\n");
+            free(node);
+            return NULL;
+        }
+        break;
+    case plus:
+    case minus:
+        node->op = copyCurTkn();
+        node->left = expression();
+        break;
+    default:
         printf("factor() must digit or paren\n");
+        free(node);
+        return NULL;
     }
     
-    nextTkn();
-    if (tkn.kind != rpare)
-        printf("factor() paren must match\n");
-
 #ifdef DEBUG
-    printf("factor returns %d\n", result);
+    //printf("factor returns %d\n", result);
 #endif
     return node;
 }

@@ -3,13 +3,15 @@
 #include <ctype.h>
 #include <string.h>
 #include "cc_tkn.h"
+#include "cc_print.h"
 
-char ctype[256 + 1];
 const char kindtext[NKIND + 1][10] = 
-    {"digit", "letter", "plus", "minus", "mult", "divi",
-     "lpare", "rpare", "line_end", ""};
+    {"digit", "ident", "plus", "minus", "mult", "divi", "gr", "gre", "le", "lee", "equal",
+     "lpare", "rpare", "assign", "begin", "end", "semi", "dot", 
+     ""};
+char ctype[256 + 1];
 const char *opsText = "+-*/()";
-const char *ctrlsText = "=;";
+const char *ctrlsText = ":=;";
 TOKEN tkn, looktkn;
 TOKEN tkns[NUM_TKN];
 int numtkn;
@@ -38,18 +40,41 @@ void nextTkn()
         getInt(&tkn);
     } else if (isalpha(c)) {
         ungetc(c, fp);
-        tkn.kind = letter;
         getIdent(&tkn);
-    } else if (isoperator(c)) {
+    } else {
         tkn.kind = ctype[c];
         tkn.text[0] = c;
         tkn.text[1] = '\0';
-    } else if (iscontrol(c)) {
-        tkn.kind = ctype[c];
-        tkn.text[0] = c;
-        tkn.text[1] = '\0';
-    }
+        switch (c) {
+        case ':':
+            if (lookChar(1) != '=')
+                break;
+            getc(fp);
+            tkn.kind = assign;
+            break;
+        case '>':
+            tkn.kind = gr;
+            if (lookChar(1) != '=')
+                break;
+            tkn.kind = gre;
+            getc(fp);
+            break;
+        case '<':
+            tkn.kind = le;
+            if (lookChar(1) != '=')
+                break;
+            tkn.kind = lee;
+            getc(fp);
+            break;
+        case '=':
+            if (lookChar(1) != '=')
+                break;
+            getc(fp);
+            tkn.kind = equal;
+            break;
 
+        }
+    }
 #ifdef DEBUG
     printTkn(tkn);
 #endif
@@ -77,18 +102,17 @@ void lookTkn(int nfoward)
         getInt(&looktkn);
     } else if (isalpha(c)) {
         ungetc(c, fp);
-        looktkn.kind = letter;
         getIdent(&looktkn);
-    } else if (isoperator(c)) {
-        looktkn.kind = ctype[c];
-        looktkn.text[0] = c;
-        looktkn.text[1] = '\0';
-    } else if (iscontrol(c)) {
-        looktkn.kind = ctype[c];
-        looktkn.text[0] = c;
-        looktkn.text[1] = '\0';
+    } else if (isoperator(c) || iscontrol(c)) {
+        if (c == ':' && lookChar(1) == '=') {
+            getc(fp);
+            tkn.kind = assign;
+        } else {
+            looktkn.kind = ctype[c];
+            looktkn.text[0] = c;
+            looktkn.text[1] = '\0';
+        }
     }
-
     strcpy(tmptxt, looktkn.text);
 
 //#ifdef DEBUG
@@ -98,6 +122,19 @@ void lookTkn(int nfoward)
         lookTkn(nfoward - 1);
 
     ungetstr(tmptxt);
+}
+
+char lookChar(int nforward)
+{
+    char c, _c;
+
+    _c = getc(fp);
+    if (nforward > 1)
+        c = lookChar(nforward - 1);
+    ungetc(_c, fp);
+    if (nforward == 1)
+        return _c;
+    return c;
 }
 
 int isoperator(char c)
@@ -146,10 +183,18 @@ void getIdent(TOKEN *tkn)
     c = getc(fp);
     if (!isalpha(c))
         return ;
+
+    tkn->kind = ident;
     tkn->text[i++] = c;
     while ((c = getc(fp)) && i < TKN_SIZE && (isalpha(c) || isdigit(c)))
         tkn->text[i++] = c;
     tkn->text[i] = '\0';
+
+    if (!strncmp(tkn->text, "BEGIN", sizeof("BEGIN")))
+        tkn->kind = begin;
+    if (!strncmp(tkn->text, "END", sizeof("END")))
+        tkn->kind = end;
+        
 
     ungetc(c, fp);
 }
@@ -191,18 +236,18 @@ void initCapture()
     for (i = '0'; i <= '9'; i++)
         ctype[i] = digit;
     for (i = 'a'; i <= 'z'; i++)
-        ctype[i] = letter;
+        ctype[i] = ident;
     for (i = 'A'; i <= 'Z'; i++)
-        ctype[i] = letter;
+        ctype[i] = ident;
     ctype['+'] = plus;  ctype['-'] = minus;
     ctype['*'] = mult;  ctype['/'] = divi;
     ctype['('] = lpare; ctype[')'] = rpare;
-    ctype[';'] = line_end;
+    ctype[';'] = semi;  ctype['.'] = dot;
 }
 
 int isvalidtkn(TOKEN _tkn)
 {
-    return _tkn.kind != INVALID && _tkn.kind != line_end;
+    return _tkn.kind != INVALID && _tkn.kind != semi;
 }
 
 TOKEN *copyCurTkn()

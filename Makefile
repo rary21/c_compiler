@@ -1,13 +1,22 @@
-mycc: main.o cc_tkn.o cc_pars.o cc_print.o cc_eval.o
-	  gcc -o mycc main.o cc_tkn.o cc_pars.o cc_print.o cc_eval.o
+CC            = gcc
+CFLAGS        = 
+DEST          = ./
+LDFLAGS       = 
+LIBS          = 
+OBJS          = main.o cc_tkn.o cc_pars.o cc_print.o cc_eval.o
+PROGRAM       = mycc
+PROGRAM_DEBUG = debug_mycc
 
-main.o: main.c
-		gcc -c main.c
-cc_tkn.o: cc_tkn.c
-		gcc -c cc_tkn.c
-cc_pars.o: cc_pars.c
-		gcc -c cc_pars.c
-cc_print.o: cc_print.c
-		gcc -c cc_print.c
-cc_eval.o: cc_eval.c
-		gcc -c cc_eval.c
+all:  $(PROGRAM)
+
+$(PROGRAM):     $(OBJS)
+				$(CC) $(OBJS) $(LDFLAGS) $(LIBS) -o $(PROGRAM); touch *.c
+
+debug: CFLAGS = -DDEBUG
+debug:     $(OBJS)
+				$(CC) $(OBJS) $(LDFLAGS) $(LIBS) -o $(PROGRAM_DEBUG); touch *.c
+
+clean:;         rm -f *.o *~ $(PROGRAM) $(PROGRAM_DEBUG)
+
+install:        $(PROGRAM)
+				install -s $(PROGRAM) $(DEST)

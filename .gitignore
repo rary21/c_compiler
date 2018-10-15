@@ -8,3 +8,6 @@ tmp*
 generate_test
 test_generation
 test.*
+mycc
+debug_mycc
+launch.json

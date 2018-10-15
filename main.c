@@ -12,16 +12,19 @@ extern TOKEN tkn, looktkn;
 int main (int argc, const char* argv[]){
     int result;
     NODE *AST;
-
+    
     openfile(argv[1]);
     initCapture();
     while (1) {
         AST = buildAST();
         if (!AST)
             break;
+        
+#ifdef DEBUG
         //printNode(AST);
-        //printNodeRecursive(AST);
-        //printRPN(AST);
+        printNodeRecursive(AST);
+        printRPN(AST);
+#endif
         printf("%d\n", evalAST(AST));
         freeAST(AST);
     }
