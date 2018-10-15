@@ -3,7 +3,7 @@
 
 #include "cc_tkn.h"
 #include "cc_pars.h"
-void printTkn(TOKEN);
+void printTkn(TOKEN *);
 void printNode(NODE *);
 void printNodeRecursive(NODE *);
 void printRPN(NODE *);

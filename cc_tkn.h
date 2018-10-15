@@ -16,7 +16,7 @@ typedef struct TOKEN {
 
 void initCapture();
 void openfile(const char *fname);
-//void _nextTkn(int mode, int nfoward);
+void _nextTkn(int mode, int nfoward);
 void nextTkn();
 void lookTkn(int);
 char lookChar(int);

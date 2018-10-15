@@ -4,11 +4,11 @@
 
 extern const char kindtext[NKIND + 1][10];
 
-void printTkn(TOKEN tkn)
+void printTkn(TOKEN *l_tkn)
 {
-    printf("token:  kind: \"%-10s\"", kindtext[tkn.kind]);
-    printf(" text: %-10s", tkn.text);
-    printf(" val : %d\n", tkn.val);
+    printf("token:  kind: \"%-10s\"", kindtext[l_tkn->kind]);
+    printf(" text: %-10s", l_tkn->text);
+    printf(" val : %d\n", l_tkn->val);
 }
 
 void printNode(NODE *node)

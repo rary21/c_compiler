@@ -6,8 +6,8 @@
 #include "cc_print.h"
 
 const char kindtext[NKIND + 1][10] = 
-    {"digit", "ident", "plus", "minus", "mult", "divi", "gr", "gre", "le", "lee", "equal",
-     "lpare", "rpare", "assign", "begin", "end", "semi", "dot", 
+    {"digit", "ident", "plus", "minus", "mult", "divi", ">", ">=", "<", "<=", "==",
+     "lpare", "rpare", "", "begin", "end", "semi", "dot", 
      ""};
 char ctype[256 + 1];
 const char *opsText = "+-*/()";
@@ -20,11 +20,27 @@ FILE *fp;
 
 void nextTkn()
 {
+    _nextTkn(0, 0);
+}
+
+void lookTkn(int nforward)
+{
+    _nextTkn(1, nforward);
+}
+
+void _nextTkn(int mode, int nforward)
+{
     int i = 0;
-    char c, sc;
-    tkn.kind = INVALID;
-    tkn.val  = 0;
-    tkn.text[0] = '\0';
+    char c, tmptxt[TKN_SIZE + 1];
+    TOKEN *l_tkn;
+
+    if (mode)
+        l_tkn = &looktkn;
+    else
+        l_tkn = &tkn;
+    l_tkn->kind = INVALID;
+    l_tkn->val  = 0;
+    l_tkn->text[0] = '\0';
     
     // skip whitespace
     skipSpace();
@@ -36,50 +52,62 @@ void nextTkn()
     c = getc(fp);
     if (isdigit(c)) {
         ungetc(c, fp);
-        tkn.kind = digit;
-        getInt(&tkn);
+        l_tkn->kind = digit;
+        getInt(l_tkn);
     } else if (isalpha(c)) {
         ungetc(c, fp);
-        getIdent(&tkn);
+        getIdent(l_tkn);
     } else {
-        tkn.kind = ctype[c];
-        tkn.text[0] = c;
-        tkn.text[1] = '\0';
+        l_tkn->kind = ctype[c];
+        l_tkn->text[0] = c;
+        l_tkn->text[1] = '\0';
         switch (c) {
         case ':':
             if (lookChar(1) != '=')
                 break;
+            l_tkn->kind = assign;
+            strncpy(l_tkn->text, kindtext[l_tkn->kind], sizeof(kindtext[l_tkn->kind]));
             getc(fp);
-            tkn.kind = assign;
             break;
         case '>':
-            tkn.kind = gr;
+            l_tkn->kind = gr;
             if (lookChar(1) != '=')
                 break;
-            tkn.kind = gre;
+            l_tkn->kind = gre;
+            strncpy(l_tkn->text, kindtext[l_tkn->kind], sizeof(kindtext[l_tkn->kind]));
             getc(fp);
             break;
         case '<':
-            tkn.kind = le;
+            l_tkn->kind = le;
             if (lookChar(1) != '=')
                 break;
-            tkn.kind = lee;
+            l_tkn->kind = lee;
+            strncpy(l_tkn->text, kindtext[l_tkn->kind], sizeof(kindtext[l_tkn->kind]));
             getc(fp);
             break;
         case '=':
             if (lookChar(1) != '=')
                 break;
+            l_tkn->kind = equal;
+            strncpy(l_tkn->text, kindtext[l_tkn->kind], sizeof(kindtext[l_tkn->kind]));
             getc(fp);
-            tkn.kind = equal;
             break;
-
+        default:
+            break;
         }
     }
 #ifdef DEBUG
-    printTkn(tkn);
+    printTkn(l_tkn);
 #endif
-}
+    if (mode) {
+        strcpy(tmptxt, looktkn.text);
+        if (nforward > 1)
+            lookTkn(nforward - 1);
+        ungetstr(tmptxt);
+    }
 
+}
+/*
 void lookTkn(int nfoward)
 {
     int i = 0;
@@ -123,6 +151,7 @@ void lookTkn(int nfoward)
 
     ungetstr(tmptxt);
 }
+*/
 
 char lookChar(int nforward)
 {
