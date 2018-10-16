@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 #include "cc_tkn.h"
 #include "cc_pars.h"
 #include "cc_eval.h"
@@ -10,8 +11,11 @@ int istack = 0;
 
 int evalAST(NODE *top)
 {
+    int result;
     evalRPN(top);
-    return popTkn()->val;
+    result = popTkn()->val;
+    assert(istack == 0);
+    return result;
 }
 
 void evalRPN(NODE *top)
@@ -25,11 +29,13 @@ void evalRPN(NODE *top)
         pushTkn(top->valtkn);
 
     // evaluate operators
-    if (top->op)
+    if (top->kind != INVALID)
         evalOP(top);
 }
 
-void pushTkn(TOKEN *_tkn) { stack[istack++] = _tkn;
+void pushTkn(TOKEN *_tkn) 
+{
+    stack[istack++] = _tkn;
 }
 
 TOKEN *popTkn()
@@ -46,7 +52,7 @@ void evalOP(NODE *node)
         int result;
         TOKEN *t;
         t = popTkn();
-        result = evalOP1(t->val, node->op->kind);
+        result = evalOP1(t->val, node->kind);
         //printf("v1:%d v2:%d op:%s result: %d\n",
         //       t1->val, t2->val, top->op->text, result);
         t->val = result;
@@ -56,7 +62,7 @@ void evalOP(NODE *node)
         TOKEN *t1, *t2;
         t2 = popTkn();
         t1 = popTkn();
-        result = evalOP2(t1->val, t2->val, node->op->kind);
+        result = evalOP2(t1->val, t2->val, node->kind);
         //printf("v1:%d v2:%d op:%s result: %d\n",
         //       t1->val, t2->val, top->op->text, result);
         t1->val = result;

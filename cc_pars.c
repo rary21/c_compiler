@@ -32,8 +32,6 @@ void freeNextNode(NODE *cur)
 
     if (cur->valtkn)
         free(cur->valtkn);
-    if (cur->op)
-        free(cur->op);
     free(cur);
 }
 
@@ -42,8 +40,77 @@ NODE *createNode()
     NODE *node = (NODE *)malloc(sizeof(NODE));
     node->left   = (NODE *)NULL;
     node->right  = (NODE *)NULL;
-    node->op     = (TOKEN *)NULL;
     node->valtkn = (TOKEN *)NULL;
+    node->kind     = INVALID;
+    return node;
+}
+
+NODE *program()
+{
+    NODE *node = createNode();
+
+    node->left = compound_statement();
+    if (tkn.kind != dot)
+        return errorMsgAndFree(node, "DOT");
+    return node;
+}
+
+NODE *compound_statement()
+{
+    NODE *node = createNode();
+
+    nextTkn();
+    if (tkn.kind != begin)
+        return errorMsgAndFree(node, "BEGIN");
+    node->left = statement_list();
+
+    nextTkn();
+    if (tkn.kind != end)
+        return errorMsgAndFree(node, "END");
+
+    return node;
+}
+
+NODE *statement_list()
+{
+    NODE *pnode;
+    NODE *node = createNode();
+
+    node->left = statement();
+
+    nextTkn();
+    while (tkn.kind == semi) {
+        pnode = createNode();
+        pnode->left = statement();
+    }
+
+    return node;
+}
+
+NODE *statement()
+{
+    NODE *node = createNode();
+
+    return node;
+}
+
+NODE *assignment_statement()
+{
+    NODE *node = createNode();
+    
+    nextTkn();
+    if (tkn.kind != ident)
+        return errorMsgAndFree(node, "IDENTIFIER");
+    node->left = createNode();
+    node->left->valtkn = copyCurTkn();
+
+    nextTkn();
+    if (tkn.kind != equal)
+        return errorMsgAndFree(node, "EQUAL");
+
+    node->kind = tkn.kind;
+    node->right = expression();
+
     return node;
 }
 
@@ -62,7 +129,7 @@ NODE *expression()
         case plus:
         case minus:
             nextTkn();
-            node->op = copyCurTkn();
+            node->kind = tkn.kind;
             node->right = term();
             pnode = createNode();
             pnode->left = node;
@@ -99,7 +166,7 @@ NODE *term()
         switch (tkn.kind) {
         case mult:
         case divi:
-            node->op = copyCurTkn();
+            node->kind = tkn.kind;
             node->right = factor();
             pnode = createNode();
             pnode->left = node;
@@ -145,7 +212,7 @@ NODE *factor()
         break;
     case plus:
     case minus:
-        node->op = copyCurTkn();
+        node->kind = tkn.kind;
         node->left = expression();
         break;
     default:
@@ -175,4 +242,11 @@ NODE *cutRedundancy(NODE *node)
         free(node);
     }
     return ret;
+}
+
+void *errorMsgAndFree(NODE *node, const char *kind)
+{
+    free(node);
+    fprintf(stderr, "error with token type : %s\n", kind);
+    return NULL;
 }

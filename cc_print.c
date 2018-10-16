@@ -32,8 +32,8 @@ void printNode(NODE *node)
         printf("NULL");
 
     printf("  op->");
-    if (node->op)
-        printf("%s\n", node->op->text);
+    if (node->kind != INVALID)
+        printf("%s\n", kindtext[node->kind]);
     else
         printf("NULL\n");
 }
@@ -55,8 +55,8 @@ void _printRPN(NODE *top)
         _printRPN(top->right);
     if (top->valtkn)
         printf("%d ", top->valtkn->val);
-    if (top->op)
-        printf("%s ", top->op->text);
+    if (top->kind != INVALID)
+        printf("%s\n", kindtext[top->kind]);
 }
 
 void printRPN(NODE *top)

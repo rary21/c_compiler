@@ -96,62 +96,17 @@ void _nextTkn(int mode, int nforward)
             break;
         }
     }
-#ifdef DEBUG
-    printTkn(l_tkn);
-#endif
     if (mode) {
         strcpy(tmptxt, looktkn.text);
         if (nforward > 1)
             lookTkn(nforward - 1);
         ungetstr(tmptxt);
     }
-
+#ifdef DEBUG
+    if (!mode)
+        printTkn(l_tkn);
+#endif
 }
-/*
-void lookTkn(int nfoward)
-{
-    int i = 0;
-    char c, sc, tmptxt[TKN_SIZE + 1];
-    looktkn.kind = INVALID;
-    looktkn.val  = 0;
-    looktkn.text[0] = '\0';
-
-    // skip whitespace
-    skipSpace();
-
-    if (eof_found) {
-        return;
-    }
-
-    c = getc(fp);
-    if (isdigit(c)) {
-        ungetc(c, fp);
-        looktkn.kind = digit;
-        getInt(&looktkn);
-    } else if (isalpha(c)) {
-        ungetc(c, fp);
-        getIdent(&looktkn);
-    } else if (isoperator(c) || iscontrol(c)) {
-        if (c == ':' && lookChar(1) == '=') {
-            getc(fp);
-            tkn.kind = assign;
-        } else {
-            looktkn.kind = ctype[c];
-            looktkn.text[0] = c;
-            looktkn.text[1] = '\0';
-        }
-    }
-    strcpy(tmptxt, looktkn.text);
-
-//#ifdef DEBUG
-//    printTkn(looktkn);
-//#endif
-    if (nfoward > 1)
-        lookTkn(nfoward - 1);
-
-    ungetstr(tmptxt);
-}
-*/
 
 char lookChar(int nforward)
 {
