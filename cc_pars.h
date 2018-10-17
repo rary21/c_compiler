@@ -5,6 +5,7 @@
 typedef struct NODE{
     struct NODE *left;
     struct NODE *right;
+    struct NODE *children;
     TOKEN *valtkn;
     int kind;
 } NODE;
@@ -18,6 +19,7 @@ NODE *compound_statement();
 NODE *statement_list();
 NODE *statement();
 NODE *assignment_statement();
+NODE *empty();
 
 NODE *expression();
 NODE *term();

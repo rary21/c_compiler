@@ -6,7 +6,7 @@
 
 enum {none, unary, binary};
 enum {digit, ident, plus, minus, mult, divi, gr, gre, le, lee, equal,
-      lpare, rpare, assign, begin, end, semi, dot, INVALID, NKIND};
+      lpare, rpare, assign, begin, end, semi, dot, compound, noop, INVALID, NKIND};
 
 typedef struct TOKEN {
     int kind;
@@ -28,5 +28,6 @@ void getIdent(TOKEN *);
 void ungetstr(char *);
 void skipSpace();
 TOKEN *copyCurTkn();
+void clearText(TOKEN *);
 
 #endif

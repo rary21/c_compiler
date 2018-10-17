@@ -7,7 +7,7 @@
 
 const char kindtext[NKIND + 1][10] = 
     {"digit", "ident", "plus", "minus", "mult", "divi", ">", ">=", "<", "<=", "==",
-     "lpare", "rpare", "", "begin", "end", "semi", "dot", 
+     "lpare", "rpare", "assign", "begin", "end", "semi", "dot", "compound", "noop",
      ""};
 char ctype[256 + 1];
 const char *opsText = "+-*/()";
@@ -144,6 +144,7 @@ void getInt(TOKEN *_tkn)
     int i = 0, num = 0;
     char c;
 
+    clearText(_tkn);
     while ((i < 10) && (c = getc(fp))) {
         if (c == EOF)
             break;
@@ -159,7 +160,7 @@ void getInt(TOKEN *_tkn)
     ungetc(c, fp);
 }
 
-void getIdent(TOKEN *tkn)
+void getIdent(TOKEN *l_tkn)
 {
     int i = 0;
     char c;
@@ -168,16 +169,17 @@ void getIdent(TOKEN *tkn)
     if (!isalpha(c))
         return ;
 
-    tkn->kind = ident;
-    tkn->text[i++] = c;
+    clearText(l_tkn);
+    l_tkn->kind = ident;
+    l_tkn->text[i++] = c;
     while ((c = getc(fp)) && i < TKN_SIZE && (isalpha(c) || isdigit(c)))
-        tkn->text[i++] = c;
-    tkn->text[i] = '\0';
+        l_tkn->text[i++] = c;
+    l_tkn->text[i] = '\0';
 
-    if (!strncmp(tkn->text, "BEGIN", sizeof("BEGIN")))
-        tkn->kind = begin;
-    if (!strncmp(tkn->text, "END", sizeof("END")))
-        tkn->kind = end;
+    if (!strncmp(l_tkn->text, "BEGIN", sizeof("BEGIN")))
+        l_tkn->kind = begin;
+    if (!strncmp(l_tkn->text, "END", sizeof("END")))
+        l_tkn->kind = end;
         
 
     ungetc(c, fp);
@@ -231,7 +233,7 @@ void initCapture()
 
 int isvalidtkn(TOKEN _tkn)
 {
-    return _tkn.kind != INVALID && _tkn.kind != semi;
+    return _tkn.kind != INVALID && _tkn.kind != semi && _tkn.kind != end;
 }
 
 TOKEN *copyCurTkn()
@@ -240,4 +242,11 @@ TOKEN *copyCurTkn()
     tmp = (TOKEN *)malloc(sizeof(TOKEN));
     memcpy(tmp, &tkn, sizeof(TOKEN));
     return tmp;
+}
+
+void clearText(TOKEN *l_tkn)
+{
+    int i;
+    for (i = 0; i < TKN_SIZE; i++)
+        l_tkn->text[i] = '\0';
 }

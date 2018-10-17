@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "cc_tkn.h"
 #include "cc_pars.h"
+#include "cc_print.h"
 
 extern TOKEN tkn, looktkn;
 extern int eof_found;
@@ -13,7 +14,7 @@ NODE *buildAST()
 {
     NODE *node;
 
-    node = expression();
+    node = program();
     nextTkn();
     return node;
 }
@@ -40,6 +41,7 @@ NODE *createNode()
     NODE *node = (NODE *)malloc(sizeof(NODE));
     node->left   = (NODE *)NULL;
     node->right  = (NODE *)NULL;
+    node->children  = (NODE *)NULL;
     node->valtkn = (TOKEN *)NULL;
     node->kind     = INVALID;
     return node;
@@ -47,41 +49,47 @@ NODE *createNode()
 
 NODE *program()
 {
-    NODE *node = createNode();
+    printf("in program \n");
+    NODE *node = NULL;
 
-    node->left = compound_statement();
+    node = compound_statement();
+
+    nextTkn();
     if (tkn.kind != dot)
-        return errorMsgAndFree(node, "DOT");
+        return errorMsgAndFree(node, "DOT : program");
     return node;
 }
 
 NODE *compound_statement()
 {
+    printf("in compound_statement \n");
     NODE *node = createNode();
 
     nextTkn();
     if (tkn.kind != begin)
-        return errorMsgAndFree(node, "BEGIN");
+        return errorMsgAndFree(node, "BEGIN : compound_statement");
     node->left = statement_list();
 
     nextTkn();
     if (tkn.kind != end)
-        return errorMsgAndFree(node, "END");
+        return errorMsgAndFree(node, "END : compound_statement");
 
     return node;
 }
 
 NODE *statement_list()
 {
-    NODE *pnode;
+    printf("in statement_list \n");
+    NODE *cnode;
     NODE *node = createNode();
 
-    node->left = statement();
-
-    nextTkn();
-    while (tkn.kind == semi) {
-        pnode = createNode();
-        pnode->left = statement();
+    node->children = statement();
+    lookTkn(1);
+    while (looktkn.kind == semi) {
+        nextTkn();
+        cnode = node->children;
+        cnode->children = statement();
+        lookTkn(1);
     }
 
     return node;
@@ -89,28 +97,46 @@ NODE *statement_list()
 
 NODE *statement()
 {
-    NODE *node = createNode();
+    printf("in statement \n");
+    NODE *node;
 
+    lookTkn(1);
+    if (looktkn.kind == begin)
+        node = compound_statement();
+    else if (looktkn.kind == ident)
+        node = assignment_statement();
+    else
+        node = empty();
+        
     return node;
 }
 
 NODE *assignment_statement()
 {
+    printf("in assignment_statement \n");
     NODE *node = createNode();
     
     nextTkn();
     if (tkn.kind != ident)
-        return errorMsgAndFree(node, "IDENTIFIER");
+        return errorMsgAndFree(node, "IDENTIFIER : assignment_statement");
     node->left = createNode();
     node->left->valtkn = copyCurTkn();
 
     nextTkn();
-    if (tkn.kind != equal)
-        return errorMsgAndFree(node, "EQUAL");
+    if (tkn.kind != assign)
+        return errorMsgAndFree(node, "ASSIGN : assignment_statement");
 
     node->kind = tkn.kind;
     node->right = expression();
 
+    return node;
+}
+
+NODE *empty()
+{
+    printf("in empty \n");
+    NODE *node = createNode();
+    node->kind = noop;
     return node;
 }
 
@@ -124,6 +150,7 @@ NODE *expression()
         free(node);
         return NULL;
     }
+    lookTkn(1);
     while (lookTkn(1), isvalidtkn(looktkn)) {
         switch (looktkn.kind) {
         case plus:
@@ -197,6 +224,7 @@ NODE *factor()
     }
 
     switch (tkn.kind) {
+    case ident:
     case digit:
         node->valtkn = copyCurTkn();
         return node;

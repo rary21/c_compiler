@@ -13,7 +13,13 @@ void printTkn(TOKEN *l_tkn)
 
 void printNode(NODE *node)
 {
-    printf("left->");
+    printf("children->");
+    if (node->children)
+        printf("some");
+    else
+        printf("NULL");
+
+    printf("  left->");
     if (node->left)
         printf("some");
     else
@@ -27,7 +33,7 @@ void printNode(NODE *node)
 
     printf("  val->");
     if (node->valtkn)
-        printf("%d", node->valtkn->val);
+        printf("%s", node->valtkn->text);
     else
         printf("NULL");
 
@@ -45,6 +51,8 @@ void printNodeRecursive(NODE *top)
     if (top->right)
         printNodeRecursive(top->right);
     printNode(top);
+    if (top->children)
+        printNodeRecursive(top->children);
 }
 
 void _printRPN(NODE *top)
@@ -54,9 +62,11 @@ void _printRPN(NODE *top)
     if (top->right)
         _printRPN(top->right);
     if (top->valtkn)
-        printf("%d ", top->valtkn->val);
+        printf("%s ", top->valtkn->text);
     if (top->kind != INVALID)
-        printf("%s\n", kindtext[top->kind]);
+        printf("%s ", kindtext[top->kind]);
+    if (top->children)
+        _printRPN(top->children);
 }
 
 void printRPN(NODE *top)

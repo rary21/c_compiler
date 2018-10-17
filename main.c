@@ -25,7 +25,7 @@ int main (int argc, const char* argv[]){
         printNodeRecursive(AST);
         printRPN(AST);
 #endif
-        printf("%d\n", evalAST(AST));
+        //printf("%d\n", evalAST(AST));
         freeAST(AST);
     }
 
