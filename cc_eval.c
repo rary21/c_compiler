@@ -5,29 +5,35 @@
 #include "cc_eval.h"
 
 #define STACK_SIZE 100
+#define NOT_FOUND 0
+#define FOUND 1
 
+extern const char kindtext[NKIND + 1][10];
 TOKEN *stack[STACK_SIZE];
+int g_table[25] = {0};
+Stack varStack = {{0}, -1};
 int istack = 0;
+
 
 int evalAST(NODE *top)
 {
     int result;
     evalRPN(top);
-    result = popTkn()->val;
+    //result = popTkn()->val;
     assert(istack == 0);
     return result;
 }
 
 void evalRPN(NODE *top)
 {
-    int result;
-    if (top->left)
-        evalRPN(top->left);
-    if (top->right)
-        evalRPN(top->right);
+    NODE **list_top = top->list;
+    while (list_top && *list_top) {
+        evalRPN(*list_top);
+        list_top++;
+    }
+
     if (top->valtkn)
         pushTkn(top->valtkn);
-
     // evaluate operators
     if (top->kind != INVALID)
         evalOP(top);
@@ -52,74 +58,145 @@ void evalOP(NODE *node)
         int result;
         TOKEN *t;
         t = popTkn();
-        result = evalOP1(t->val, node->kind);
-        //printf("v1:%d v2:%d op:%s result: %d\n",
-        //       t1->val, t2->val, top->op->text, result);
+        result = evalOP1(t, node->kind);
+        //printf("v:%s op:%s result: %d\n",
+        //       t->text, kindtext[node->kind], result);
         t->val = result;
+        t->kind = digit;
         pushTkn(t);
     } else if (opnum == binary) {
         int result;
         TOKEN *t1, *t2;
         t2 = popTkn();
         t1 = popTkn();
-        result = evalOP2(t1->val, t2->val, node->kind);
+        result = evalOP2(t1, t2, node->kind);
         //printf("v1:%d v2:%d op:%s result: %d\n",
-        //       t1->val, t2->val, top->op->text, result);
-        t1->val = result;
-        pushTkn(t1);
+        //       t1->val, t2->val, kindtext[node->kind], result);
+        if (node->kind != assign) {
+            t1->val = result;
+            t1->kind = digit;
+            pushTkn(t1);
+        } else {
+            addTable(t1->val);
+        }
     } else {
-        perror("op must take at least one operand\n");
+        //perror("op must take at least one operand\n");
     }
 }
 
-int evalOP1(int val, int op)
+int evalOP1(TOKEN *l_tkn, int op)
 {
+    int *val;
+    if (isident(l_tkn))
+        val = &g_table[l_tkn->val];
+    else
+        val = &l_tkn->val;
+
     switch (op) {
     case plus:
-        return val;
+        return *val;
         break;
     case minus:
-        return -val;
+        return -*val;
         break;
     default:
         break;
     }
-    perror("evalOP");
+    perror("evalOP1");
     return 0;
 }
 
-int evalOP2(int val1, int val2, int op)
+int evalOP2(TOKEN *val1, TOKEN *val2, int op)
 {
+    int *v1, *v2;
+    if (isident(val1))
+        v1 = &g_table[val1->val];
+    else
+        v1 = &val1->val;
+    if (isident(val2))
+        v2 = &g_table[val2->val];
+    else
+        v2 = &val2->val;
+
     switch (op) {
     case plus:
-        return val1 + val2;
+        return *v1 + *v2;
         break;
     case minus:
-        return val1 - val2;
+        return *v1 - *v2;
         break;
     case mult:
-        return val1 * val2;
+        return *v1 * *v2;
         break;
     case divi:
-        if (val2 == 0) {
+        if (*v2 == 0) {
             perror("error: zero division\n");
             return 0;
         }
-        return val1 / val2;
+        return *v1 / *v2;
         break;
+    case assign:
+        *v1 = *v2;
+        return *v1;
     default:
         break;
     }
-    perror("evalOP");
+    perror("evalOP2");
     return 0;
 }
 
 int opnumber(NODE *node)
 {
     int num;
-    if (node->left && node->right)
+    if (node->list_count == 2)
         return binary;
-    if (!node->left && !node->right)
-        return none;
-    return unary;
+    if (node->list_count == 1)
+        return unary;
+    return none;
+}
+
+void displayVars()
+{
+    int i;
+    for (i = 0; i < 25; i++)
+        if (findStack(&varStack, i))
+            printf("[%c]=%d ", i + 'a', g_table[i]);
+    printf("\n");
+}
+
+void pushStack(Stack *_stack, int val)
+{
+    if (_stack->cnt < STACK_SIZE - 1)
+        _stack->s[++_stack->cnt] = val;
+    else
+        perror("pushstack");
+}
+
+int popStack(Stack *_stack)
+{
+    if (_stack->cnt >= 0)
+        return _stack->s[_stack->cnt--];
+    else
+        perror("popstack");
+    return 0;
+}
+
+void addTable(int id)
+{
+    if (findStack(&varStack, id) == NOT_FOUND) {
+        // add to table
+        pushStack(&varStack, id);
+        printf("[%c] is added to table\n", id + 'a');
+    }
+}
+
+int findStack(Stack *_stack, int id)
+{
+    int i;
+
+    for (i = 0; i <= _stack->cnt; i++)
+        if (_stack->s[i] == id)
+            return FOUND;
+    
+    return NOT_FOUND;
 }

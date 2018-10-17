@@ -1,0 +1,10 @@
+BEGIN
+    x := 11;
+    BEGIN
+        n := 2;
+        a := 3;
+        b := 10 * a + 20 * n / 4;
+        c := a - - b
+    END;
+    x := a * b;
+END.

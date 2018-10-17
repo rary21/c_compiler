@@ -13,23 +13,14 @@ void printTkn(TOKEN *l_tkn)
 
 void printNode(NODE *node)
 {
-    printf("children->");
-    if (node->children)
+    printf("list->");
+    if (node->list)
         printf("some");
     else
         printf("NULL");
 
-    printf("  left->");
-    if (node->left)
-        printf("some");
-    else
-        printf("NULL");
-
-    printf("  right->");
-    if (node->right)
-        printf("some");
-    else
-        printf("NULL");
+    printf("  listcnt->");
+    printf("%d", node->list_count);
 
     printf("  val->");
     if (node->valtkn)
@@ -42,31 +33,33 @@ void printNode(NODE *node)
         printf("%s\n", kindtext[node->kind]);
     else
         printf("NULL\n");
+
+    //printf("   pointer %p\n", node);
 }
 
 void printNodeRecursive(NODE *top)
 {
-    if (top->left)
-        printNodeRecursive(top->left);
-    if (top->right)
-        printNodeRecursive(top->right);
+    NODE **list_top = top->list;
+    //printf("%p %p\n", top->list, top);
+    //printf("%d\n", top->kind);
+    while (list_top && *list_top) {
+        printNodeRecursive(*list_top);
+        list_top++;
+    }
     printNode(top);
-    if (top->children)
-        printNodeRecursive(top->children);
 }
 
 void _printRPN(NODE *top)
 {
-    if (top->left)
-        _printRPN(top->left);
-    if (top->right)
-        _printRPN(top->right);
+    NODE **list_top = top->list;
+    while (list_top && *list_top) {
+        _printRPN(*list_top);
+        list_top++;
+    }
     if (top->valtkn)
         printf("%s ", top->valtkn->text);
-    if (top->kind != INVALID)
+    else if (top->kind != INVALID)
         printf("%s ", kindtext[top->kind]);
-    if (top->children)
-        _printRPN(top->children);
 }
 
 void printRPN(NODE *top)

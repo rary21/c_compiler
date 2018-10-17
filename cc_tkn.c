@@ -176,6 +176,8 @@ void getIdent(TOKEN *l_tkn)
         l_tkn->text[i++] = c;
     l_tkn->text[i] = '\0';
 
+    l_tkn->val = l_tkn->text[0] - 'a';
+
     if (!strncmp(l_tkn->text, "BEGIN", sizeof("BEGIN")))
         l_tkn->kind = begin;
     if (!strncmp(l_tkn->text, "END", sizeof("END")))
@@ -236,11 +238,17 @@ int isvalidtkn(TOKEN _tkn)
     return _tkn.kind != INVALID && _tkn.kind != semi && _tkn.kind != end;
 }
 
+int isident(TOKEN *_tkn)
+{
+    return _tkn->kind == ident;
+}
+
 TOKEN *copyCurTkn()
 {
     TOKEN *tmp;
     tmp = (TOKEN *)malloc(sizeof(TOKEN));
     memcpy(tmp, &tkn, sizeof(TOKEN));
+    m_cnt++;
     return tmp;
 }
 

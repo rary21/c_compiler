@@ -9,50 +9,75 @@
 
 extern TOKEN tkn, looktkn;
 extern int eof_found;
+extern const char kindtext[NKIND + 1][10];
 
 NODE *buildAST()
 {
     NODE *node;
 
+    if (lookTkn(1), looktkn.kind == INVALID)
+        return NULL;
     node = program();
-    nextTkn();
     return node;
 }
 
 void freeAST(NODE *top)
 {
-    freeNextNode(top);
+    freeNodeRecursive(top);
+    assert(m_cnt == 0);
 }
 
-void freeNextNode(NODE *cur)
+void freeNodeRecursive(NODE *cur)
 {
-    if (cur->left)
-        freeNextNode(cur->left);
-    if (cur->right)
-        freeNextNode(cur->right);
+    int i;
+    NODE **toplist = cur->list;
+    while (toplist && *toplist) {
+        freeNodeRecursive(*toplist);
+        toplist++;
+    }
 
+    if (cur->list) {
+        free(cur->list);
+        m_cnt--;
+    }
     if (cur->valtkn)
-        free(cur->valtkn);
-    free(cur);
+        freeTkn(cur->valtkn);
+    freeNode(cur);
+}
+
+void freeNode(NODE *node)
+{
+    free(node);
+    m_cnt--;
+}
+
+void freeTkn(TOKEN *l_tkn)
+{
+    free(l_tkn);
+    m_cnt--;
 }
 
 NODE *createNode()
 {
     NODE *node = (NODE *)malloc(sizeof(NODE));
-    node->left   = (NODE *)NULL;
-    node->right  = (NODE *)NULL;
-    node->children  = (NODE *)NULL;
+    node->list  = (NODE **)NULL;
     node->valtkn = (TOKEN *)NULL;
     node->kind     = INVALID;
+    node->list_count = 0;
+    m_cnt++;
     return node;
 }
 
 NODE *program()
 {
-    printf("in program \n");
+#ifdef DEBUG
+    printf("[in program] \n");
+#endif
     NODE *node = NULL;
 
     node = compound_statement();
+    if (!node)
+        return NULL;
 
     nextTkn();
     if (tkn.kind != dot)
@@ -62,42 +87,56 @@ NODE *program()
 
 NODE *compound_statement()
 {
-    printf("in compound_statement \n");
+#ifdef DEBUG
+    printf("[in compound_statement] \n");
+#endif
     NODE *node = createNode();
 
     nextTkn();
     if (tkn.kind != begin)
         return errorMsgAndFree(node, "BEGIN : compound_statement");
-    node->left = statement_list();
+    nodeAppend(node, statement_list());
 
     nextTkn();
     if (tkn.kind != end)
         return errorMsgAndFree(node, "END : compound_statement");
 
+#ifdef DEBUG
+    printf("[end compound_statement] \n");
+#endif
     return node;
 }
 
 NODE *statement_list()
 {
-    printf("in statement_list \n");
+#ifdef DEBUG
+    printf("[in statement_list] \n");
+#endif
     NODE *cnode;
     NODE *node = createNode();
 
-    node->children = statement();
+    nodeAppend(node, statement());
     lookTkn(1);
     while (looktkn.kind == semi) {
         nextTkn();
-        cnode = node->children;
-        cnode->children = statement();
+#ifdef DEBUG
+        printf("[new statement_list] \n");
+#endif
+        nodeAppend(node, statement());
         lookTkn(1);
     }
 
+#ifdef DEBUG
+    printf("[end statement_list]\n");
+#endif
     return node;
 }
 
 NODE *statement()
 {
-    printf("in statement \n");
+#ifdef DEBUG
+    printf("[in statement] \n");
+#endif
     NODE *node;
 
     lookTkn(1);
@@ -113,28 +152,36 @@ NODE *statement()
 
 NODE *assignment_statement()
 {
-    printf("in assignment_statement \n");
+#ifdef DEBUG
+    printf("[in assignment_statement] \n");
+#endif
     NODE *node = createNode();
+    NODE *cnode;
     
     nextTkn();
     if (tkn.kind != ident)
         return errorMsgAndFree(node, "IDENTIFIER : assignment_statement");
-    node->left = createNode();
-    node->left->valtkn = copyCurTkn();
+    cnode = createNode();
+    cnode->kind = ident;
+    cnode->valtkn = copyCurTkn();
+    nodeAppend(node, cnode);
 
     nextTkn();
     if (tkn.kind != assign)
         return errorMsgAndFree(node, "ASSIGN : assignment_statement");
 
-    node->kind = tkn.kind;
-    node->right = expression();
+    node->kind = assign;
+    cnode = expression();
+    nodeAppend(node, cnode);
 
     return node;
 }
 
 NODE *empty()
 {
-    printf("in empty \n");
+#ifdef DEBUG
+    printf("[in empty] \n");
+#endif
     NODE *node = createNode();
     node->kind = noop;
     return node;
@@ -145,9 +192,9 @@ NODE *expression()
     NODE *node, *pnode;
 
     node = createNode();
-    node->left = term();
-    if (!node->left) {
-        free(node);
+    nodeAppend(node, term());
+    if (!node->list) {
+        freeNodeRecursive(node);
         return NULL;
     }
     lookTkn(1);
@@ -157,9 +204,9 @@ NODE *expression()
         case minus:
             nextTkn();
             node->kind = tkn.kind;
-            node->right = term();
+            nodeAppend(node, term());
             pnode = createNode();
-            pnode->left = node;
+            nodeAppend(pnode, node);
             node = pnode;
             break;
         case rpare:
@@ -181,9 +228,9 @@ NODE *term()
     NODE *node, *pnode;
 
     node = createNode();
-    node->left = factor();
-    if (!node->left) {
-        free(node);
+    nodeAppend(node, factor());
+    if (!node->list) {
+        freeNodeRecursive(node);
         return NULL;
     }
     while (lookTkn(1), isvalidtkn(looktkn)) {
@@ -194,9 +241,9 @@ NODE *term()
         case mult:
         case divi:
             node->kind = tkn.kind;
-            node->right = factor();
+            nodeAppend(node, factor());
             pnode = createNode();
-            pnode->left = node;
+            nodeAppend(pnode, node);
             node = pnode;
             break;
         default :
@@ -229,23 +276,23 @@ NODE *factor()
         node->valtkn = copyCurTkn();
         return node;
     case lpare:
-        free(node);
+        freeNode(node);
         node = expression(); 
         nextTkn();
         if (tkn.kind != rpare) {
             printf("factor() paren must match\n");
-            free(node);
+            freeNode(node);
             return NULL;
         }
         break;
     case plus:
     case minus:
         node->kind = tkn.kind;
-        node->left = expression();
+        nodeAppend(node, expression());
         break;
     default:
         printf("factor() must digit or paren\n");
-        free(node);
+        freeNode(node);
         return NULL;
     }
     
@@ -260,21 +307,36 @@ NODE *cutRedundancy(NODE *node)
     NODE *ret;
 
     ret = node;
-    assert(node->left  || node->right);
-
-    if (node->left && !node->right) {
-        ret = node->left;
-        free(node);
-    } else if (!node->left && node->right) {
-        ret = node->right;
-        free(node);
+    if (node->list_count == 1) {
+        ret = *node->list;
+        freeNode(node);
+        free(node->list);
+        m_cnt--;
     }
     return ret;
 }
 
 void *errorMsgAndFree(NODE *node, const char *kind)
 {
-    free(node);
+    freeNode(node);
     fprintf(stderr, "error with token type : %s\n", kind);
     return NULL;
+}
+
+void nodeAppend(NODE *node, NODE* next)
+{
+    int len = node->list_count;
+
+    if (!next) {
+        perror("error: trying to append NULL pointer\n");
+        return ;
+    }
+    if (len == 0)
+        m_cnt++;
+    // reallocate memory
+    node->list = (NODE **)realloc(node->list, (len + 2) * sizeof(NODE *));
+
+    *(node->list + node->list_count) = next;
+    *(node->list + node->list_count + 1) = NULL;
+    node->list_count++;
 }

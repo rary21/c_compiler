@@ -3,16 +3,19 @@
 #include "cc_tkn.h"
 
 typedef struct NODE{
-    struct NODE *left;
-    struct NODE *right;
-    struct NODE *children;
+    struct NODE **list;
     TOKEN *valtkn;
+    int  list_count;
     int kind;
 } NODE;
 
+int m_cnt; // malloc count
+
 NODE *buildAST();
 void freeAST(NODE *);
-void freeNextNode(NODE *);
+void freeNodeRecursive(NODE *);
+void freeNode(NODE *);
+void freeTkn(TOKEN *);
 
 NODE *program();
 NODE *compound_statement();
@@ -25,6 +28,7 @@ NODE *expression();
 NODE *term();
 NODE *factor();
 NODE *cutRedundancy(NODE *);
+void nodeAppend(NODE *node, NODE* next);
 
 void *errorMsgAndFree(NODE *node, const char *kind);
 #endif

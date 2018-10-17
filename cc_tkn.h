@@ -23,6 +23,7 @@ char lookChar(int);
 int isoperator(char c);
 int iscontrol(char c);
 int isvalidtkn(TOKEN);
+int isident(TOKEN *);
 void getInt(TOKEN *);
 void getIdent(TOKEN *);
 void ungetstr(char *);
