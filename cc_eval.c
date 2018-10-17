@@ -197,6 +197,5 @@ int findStack(Stack *_stack, int id)
     for (i = 0; i <= _stack->cnt; i++)
         if (_stack->s[i] == id)
             return FOUND;
-    
     return NOT_FOUND;
 }

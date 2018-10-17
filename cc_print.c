@@ -34,14 +34,12 @@ void printNode(NODE *node)
     else
         printf("NULL\n");
 
-    //printf("   pointer %p\n", node);
 }
 
 void printNodeRecursive(NODE *top)
 {
     NODE **list_top = top->list;
-    //printf("%p %p\n", top->list, top);
-    //printf("%d\n", top->kind);
+
     while (list_top && *list_top) {
         printNodeRecursive(*list_top);
         list_top++;

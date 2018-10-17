@@ -29,8 +29,6 @@ int main (int argc, const char* argv[]){
         displayVars();
 
         freeAST(AST);
-        
     }
-
     return 0;
 }
