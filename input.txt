@@ -3,7 +3,7 @@ BEGIN
     BEGIN
         n := 2;
         a := 3;
-        b := 10 * a + 20 * n / 4;
+        b := (10 * a + 20) * n / 4;
         c := a - - b
     END;
     x := a * b;

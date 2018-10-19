@@ -87,11 +87,7 @@ void evalOP(NODE *node)
 int evalOP1(TOKEN *l_tkn, int op)
 {
     int *val;
-    if (isident(l_tkn))
-        val = &g_table[l_tkn->val];
-    else
-        val = &l_tkn->val;
-
+    val = getReference(l_tkn, 0);
     switch (op) {
     case plus:
         return *val;
@@ -109,14 +105,10 @@ int evalOP1(TOKEN *l_tkn, int op)
 int evalOP2(TOKEN *val1, TOKEN *val2, int op)
 {
     int *v1, *v2;
-    if (isident(val1))
-        v1 = &g_table[val1->val];
-    else
-        v1 = &val1->val;
-    if (isident(val2))
-        v2 = &g_table[val2->val];
-    else
-        v2 = &val2->val;
+    v1 = getReference(val1, op == assign);
+    v2 = getReference(val2, 0);
+    //if (!v1 || !v2)
+    //    return 0;
 
     switch (op) {
     case plus:
@@ -158,10 +150,11 @@ int opnumber(NODE *node)
 void displayVars()
 {
     int i;
+    printf("--- ");
     for (i = 0; i < 25; i++)
         if (findStack(&varStack, i))
             printf("[%c]=%d ", i + 'a', g_table[i]);
-    printf("\n");
+    printf(" ---\n");
 }
 
 void pushStack(Stack *_stack, int val)
@@ -198,4 +191,29 @@ int findStack(Stack *_stack, int id)
         if (_stack->s[i] == id)
             return FOUND;
     return NOT_FOUND;
+}
+
+int isinTable(TOKEN *l_tkn)
+{
+    return findStack(&varStack, l_tkn->val) == FOUND;
+}
+
+int *getAddress(TOKEN *l_tkn)
+{
+    return &g_table[l_tkn->val];
+}
+
+// mode: 0 - 
+int *getReference(TOKEN *l_tkn, int mode)
+{
+    if (isident(l_tkn)) {
+        if (mode || isinTable(l_tkn)) {
+            return &g_table[l_tkn->val];
+        } else {
+            printf("error: undefined variable [%c]\n", l_tkn->val + 'a');
+            return NULL;
+        }
+    } else {
+        return &l_tkn->val;
+    }
 }

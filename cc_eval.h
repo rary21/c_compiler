@@ -23,4 +23,7 @@ void addTable(int id);
 void pushStack(Stack *_stack, int val);
 int popStack(Stack *_stack);
 int findStack(Stack *_stack, int id);
+int isinTable(TOKEN *l_tkn);
+int *getAddress(TOKEN *l_tkn);
+int *getReference(TOKEN *l_tkn, int mode);
 #endif

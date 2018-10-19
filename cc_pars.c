@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
 #include <assert.h>
 #include "cc_tkn.h"
 #include "cc_pars.h"
